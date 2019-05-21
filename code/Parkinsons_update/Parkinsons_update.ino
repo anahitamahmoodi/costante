@@ -23,7 +23,7 @@
 #include "I2Cdev.h"
 
 #include "MPU6050_6Axis_MotionApps20.h"
-//#include "MPU6050.h" // not necessary if using MotionApps include file
+//#include "MPU6050.h" // not necessary if using MotionApps include fily
 
 // Arduino Wire library is required if I2Cdev I2CDEV_ARDUINO_WIRE implementation
 // is used in I2Cdev.h
@@ -44,18 +44,6 @@ MPU6050 mpu;
    external interrupt #0 pin. On the Arduino Uno and Mega 2560, this is
    digital I/O pin 2.
  * ========================================================================= */
-
-/* =========================================================================
-   NOTE: Arduino v1.0.1 with the Leonardo board generates a compile error
-   when using Serial.write(buf, len). The Teapot output uses this method.
-   The solution requires a modification to the Arduino USBAPI.h file, which
-   is fortunately simple, but annoying. This will be fixed in the next IDE
-   release. For more info, see these links:
-
-   http://arduino.cc/forum/index.php/topic,109987.0.html
-   http://code.google.com/p/arduino/issues/detail?id=958
- * ========================================================================= */
-
 
 // uncomment "OUTPUT_READABLE_QUATERNION" if you want to see the actual
 // quaternion components in a [w, x, y, z] format (not best for parsing
@@ -119,11 +107,16 @@ void dmpDataReady() {
     mpuInterrupt = true;
 }
 
-
-
 // ================================================================
 // ===                      INITIAL SETUP                       ===
 // ================================================================
+
+double prev_x[16];
+double prev_y[16];
+double prev_z[16];
+
+double b[16]={-0.0099978,0.0078975,0.048219,0.030962,-0.063863,-0.067709,0.15938,
+0.4341,0.4341,0.15938,-0.067709,-0.063863,0.030962,0.048219,0.0078975,-0.0099978};
 
 void setup() {
     // join I2C bus (I2Cdev library doesn't do this automatically)
@@ -202,12 +195,15 @@ void setup() {
 }
 
 
-
 // ================================================================
 // ===                    MAIN PROGRAM LOOP                     ===
 // ================================================================
 
 void loop() {
+  
+control_loop_timer=0;
+control_loop_period=10;
+
     // if programming failed, don't try to do anything
     if (!dmpReady) return;
 
@@ -288,36 +284,43 @@ void loop() {
 //            Serial.println(ypr[2] * 180/M_PI);
 //        #endif
 
-        #ifdef OUTPUT_READABLE_REALACCEL
+if(millis()- control_loop_timer > control_loop_period) { 
+  control_loop_timer = millis();
+//        #ifdef OUTPUT_READABLE_REALACCEL
             // display real acceleration, adjusted to remove gravity
             mpu.dmpGetQuaternion(&q, fifoBuffer);
             mpu.dmpGetAccel(&aa, fifoBuffer);
             mpu.dmpGetGravity(&gravity, &q);
             mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
-//            Serial.print("areal\t");
+//          Serial.print("areal\t");
             Serial.print(aaReal.x);
             Serial.print(" ");
             Serial.print(aaReal.y);
             Serial.print(" ");
             Serial.println(aaReal.z);
         #endif
+}
+//        #ifdef OUTPUT_READABLE_WORLDACCEL
+//            // display initial world-frame acceleration, adjusted to remove gravity
+//            // and rotated based on known orientation from quaternion
+//            mpu.dmpGetQuaternion(&q, fifoBuffer);
+//            mpu.dmpGetAccel(&aa, fifoBuffer);
+//            mpu.dmpGetGravity(&gravity, &q);
+//            mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
+//            mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
+////          Serial.print("aworld\t");
+//            Serial.print(aaWorld.x);
+//            Serial.print(" ");
+//            Serial.print(aaWorld.y);
+//            Serial.print(" ");
+//            Serial.println(aaWorld.z);
+//        #endif
 
-        #ifdef OUTPUT_READABLE_WORLDACCEL
-            // display initial world-frame acceleration, adjusted to remove gravity
-            // and rotated based on known orientation from quaternion
-            mpu.dmpGetQuaternion(&q, fifoBuffer);
-            mpu.dmpGetAccel(&aa, fifoBuffer);
-            mpu.dmpGetGravity(&gravity, &q);
-            mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
-            mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
-//            Serial.print("aworld\t");
-            Serial.print(aaWorld.x);
-            Serial.print(" ");
-            Serial.print(aaWorld.y);
-            Serial.print(" ");
-            Serial.println(aaWorld.z);
-        #endif
+
 
 
     }
+
+}
+
 }
